@@ -1,0 +1,73 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "configurator.fullname" . }}
+  namespace: {{ include "configurator.namespace" . }}
+  labels:
+    {{- include "configurator.labels" . | nindent 4 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "configurator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "configurator.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "configurator.fullname" . }}
+      containers:
+        - name: {{ include "configurator.fullname" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+          {{- range .Values.ports }}
+          - name: {{ .name }}
+            containerPort: {{ .containerPort }}
+            protocol: {{ .protocol }}
+          {{- end }}
+          env:
+          - name: CONFIG_FILE
+            value: {{ include "configurator.config.mountPath" . }}/config.yaml
+          - name: BUDGET_FILE
+            value: {{ include "configurator.budget.mountPath" . }}/budget.yaml
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - name: config
+            mountPath: {{ include "configurator.config.mountPath" . }}
+            readOnly: true
+          - name: budget
+            mountPath: {{ include "configurator.budget.mountPath" . }}
+            readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          defaultMode: 420
+          name: {{ include "configurator.config.configmap.name" . }}
+      - name: budget
+        configMap:
+          defaultMode: 420
+          name: {{ include "configurator.budget.configmap.name" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

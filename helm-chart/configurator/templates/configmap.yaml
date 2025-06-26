@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "configurator.config.configmap.name" . }}
+  namespace: {{ include "configurator.namespace" . }}
+  labels:
+    {{- include "configurator.labels" . | nindent 4 }}
+data:
+  config.yaml: |- 
+    {{- toYaml .Values.config | nindent 4 }}
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "configurator.budget.configmap.name" . }}
+  namespace: {{ include "configurator.namespace" . }}
+  labels:
+    {{- include "configurator.labels" . | nindent 4 }}
+data:
+  budget.yaml: |- 
+    {{- toYaml .Values.budgets | nindent 4 }}

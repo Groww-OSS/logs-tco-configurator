@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  configurator:
+    image: localhost/configurator:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./config:/app/config # Mount the config directory
+    environment:
+      - CONFIG_FILE=/app/config/config.yaml # Example environment variable
+      # - LOG_LEVEL=info # Example environment variable
+    # ports:
+    #   - "8080:8080" # Map port 8080 of the container to port 8080 on the host
+    command: ["/app/configurator"]

@@ -1,0 +1,10 @@
+# This file defines the budget configuration for different organizations and their environments.
+# Each organization can have multiple environments, and each environment can have multiple workloads
+orgs:
+  - name: invest
+    envs:
+      - name: stage
+        workloads:
+          - name: otel-collector
+            daily_ingestion_budget: 30
+          # -- Add more workloads as needed --

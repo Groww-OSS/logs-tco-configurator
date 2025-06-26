@@ -1,0 +1,108 @@
+fullnameOverride: "configurator"
+namespaceOverride: "kube-logging"
+
+image:
+  repository: <your-docker-repo>/configurator
+  tag: v0.1.0
+  pullPolicy: Always
+
+serviceAccount:
+  create: true
+  name: configurator
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+
+livenessProbe:
+  initialDelaySeconds: 5
+  timeoutSeconds: 5
+  periodSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ -f /app/config/config.yaml ]; then
+          exit 0
+        else
+          exit 1
+        fi
+
+resources:
+  limits:
+    cpu: 1
+    memory: 250M
+  requests:
+    cpu: 50m
+    memory: 50M
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+fileMounts:
+  config:
+    mountPath: /app/config
+  budget:
+    mountPath: /app/budget
+
+config:
+  cluster: <your-cluster-name>
+  promtail:
+    sampling:
+      selector:
+        format: "{workload=\"%s\"} |= \"\""
+    secret:
+      name: promtail
+      namespace: kube-logging
+      key: promtail.yaml
+  metrics:
+    mimir_tenant: <tenant_id>
+    query_timeout: 30s
+  scheduling:
+    timezone: Asia/Kolkata
+    cron:
+      budget_reset: "0 0 * * *" # every day at midnight
+  budget:
+    org: <org_name>
+    env: prod
+    multiplier: 1
+    mimimum: 0.5
+  log:
+    level: trace
+    format: json
+
+  # only required when using mode: dev
+  mode: prod
+  kube_config: .tmp/kubeconfig
+
+  dry_run: false
+
+budgets:
+  orgs:
+    - name: <org_name>
+      envs:
+        - name: prod
+          workloads:
+            - name: otel-collector
+              daily_ingestion_budget: 1
+
+ports:
+  - name: metrics
+    containerPort: 9091
+    protocol: TCP
+
+service:
+  type: ClusterIP
+
+serviceMonitor:
+  enabled: true
+  interval: 1m
+  scrapeTimeout: 30s
+  additionalLabels:
+    release: kube-proms
